@@ -12,7 +12,7 @@ Esta guía prepara el despliegue; **no se ha hecho un despliegue definitivo**. U
 
 ## Netlify
 
-El repositorio incluye `netlify.toml`: compila con `npm run build`, publica `dist/` y reescribe las rutas internas a `/index.html`. En Netlify creá un sitio desde el repositorio o un despliegue de prueba, elegí la rama aprobada y comprobá los ajustes de build. En **Site configuration → Environment variables**, agregá para Build:
+El repositorio incluye `netlify.toml`: compila con `npm run build`, publica `dist/` y reescribe las rutas internas a `/index.html`. En Netlify elegí **Add new project → Import an existing project → GitHub** y el repositorio `Maaupelozo/PuntoDrinksGestiNComercial`. Seleccioná `feat/production-ready` como rama de producción: `main` todavía contiene el prototipo. Dejá la raíz del repositorio como base. Netlify detecta `pnpm-lock.yaml`; una instalación limpia con pnpm 10.34.3 y el build pasaron localmente. En **Site configuration → Environment variables**, agregá para Build antes del primer despliegue:
 
 ```text
 VITE_SUPABASE_URL
