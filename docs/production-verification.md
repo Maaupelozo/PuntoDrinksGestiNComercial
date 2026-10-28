@@ -1,6 +1,6 @@
 # Verificación del Módulo 05
 
-Fecha: 2026-10-27. Rama: `feat/production-ready`. No hubo commit ni despliegue.
+Fecha: 2026-10-27. Rama: `feat/production-ready`, publicada en GitHub y desplegada en Netlify Free como `https://puntodrinkrcia.netlify.app/`.
 
 ## Comprobado
 
@@ -12,10 +12,11 @@ Fecha: 2026-10-27. Rama: `feat/production-ready`. No hubo commit ni despliegue.
 - Navegador de escritorio con los datos reales: Dashboard, Configuración, reporte diario y mensual, exportación CSV y PDF. La suite móvil automatizada probó el flujo con respuestas simuladas; la lectura móvil contra datos reales no terminó antes de la limpieza.
 - `cleanup_module05_verification.sql` se ensayó sobre una copia local de los registros reales y dejó 14 tablas en cero. El propietario lo ejecutó en Supabase. Una comprobación posterior desde la cuenta temporal confirmó las 14 tablas y el reporte financiero en cero.
 - El propietario eliminó después la cuenta comercial temporal y se confirmó que sus credenciales ya no permiten iniciar sesión.
+- Netlify HTTPS: `/`, `/ingresar` y `/restablecer-clave` respondieron 200; la ruta privada `/stock` redirigió a ingreso. Escritorio y celular mostraron el título correcto, ingreso y recuperación sin errores de JavaScript. Los assets publicados contienen la URL y clave publicable de Supabase correctas.
 
-## Antes de publicar
+## Pendiente antes de usar datos comerciales reales
 
-- Asignar una URL HTTPS de preview, configurar Site URL y Redirect URLs exactas y probar allí las rutas, el inicio/cierre, los datos temporales y la recuperación por correo.
+- Configurar Site URL y Redirect URL exactas para Netlify en Supabase. Probar allí el inicio/cierre, datos temporales y recuperación por correo; las pruebas públicas HTTPS ya pasaron.
 - Configurar SMTP propio en Supabase y repetir la prueba de recepción y cambio de contraseña desde el dominio HTTPS.
 - Ejecutar y comprobar una copia de seguridad y una restauración en un proyecto separado conforme a [BACKUP.md](../BACKUP.md).
 
