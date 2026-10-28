@@ -16,6 +16,7 @@ Fecha: 2026-10-27. Rama: `feat/production-ready`, publicada en GitHub y desplega
 - Con una cuenta temporal nueva y vacía, el ingreso/cierre y la sesión persistente funcionaron desde Netlify en escritorio y celular. Un producto creado desde la web se comprobó en Supabase, se leyó desde la navegación móvil y persistió tras recargar. La limpieza revisada por el propietario dejó las 14 tablas de esa cuenta en cero.
 - El distintivo «Powered by Netlify» interceptó la navegación inferior en celular; el propietario lo desactivó desde Netlify y la navegación volvió a pasar.
 - La solicitud de recuperación desde Netlify incluyó la Redirect URL HTTPS exacta, pero Supabase respondió `429 over_email_send_rate_limit` por el proveedor de correo integrado. No se envió ni abrió un correo de recuperación desde ese dominio.
+- Las diez secciones autenticadas cargaron desde Netlify sin alertas ni errores de JavaScript en escritorio y celular. Reportes descargó CSV y PDF válidos desde una cuenta vacía en ambos tamaños; no se repitió con importes no vacíos.
 
 ## Pendiente antes de usar datos comerciales reales
 
