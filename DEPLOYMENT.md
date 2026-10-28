@@ -1,6 +1,6 @@
 # Publicación de Punto Drinks
 
-La aplicación está publicada en `https://puntodrinkrcia.netlify.app/`. La carga HTTPS, las rutas públicas y la configuración publicable de Supabase fueron verificadas; aún faltan la recuperación por correo y las operaciones autenticadas desde ese dominio antes de usar datos comerciales reales.
+La aplicación está publicada en `https://puntodrinkrcia.netlify.app/`. La carga HTTPS, las rutas públicas, la configuración publicable de Supabase, el ingreso/cierre y una escritura aislada de producto fueron verificados. La recuperación por correo sigue pendiente: Supabase devolvió `over_email_send_rate_limit` con el proveedor integrado.
 
 ## Comprobaciones previas
 
@@ -37,6 +37,6 @@ La aplicación construye `redirectTo` a partir del origen desde el que se abre. 
 
 ## Prueba de un despliegue de prueba
 
-En `puntodrinkrcia.netlify.app` ya se verificaron HTTPS, carga directa de `/stock`, `/ingresar` y `/restablecer-clave`, protección de rutas, pantallas de ingreso y recuperación en escritorio y celular, y las variables públicas correctas. Falta verificar allí inicio y cierre de sesión con una cuenta autorizada, lectura y escritura con datos temporales, Dashboard y reportes autenticados, descargas CSV/PDF y el correo de recuperación recibido y abierto. Limpiá sólo los UUID temporales identificados después de esas pruebas.
+En `puntodrinkrcia.netlify.app` ya se verificaron HTTPS, carga directa de `/stock`, `/ingresar` y `/restablecer-clave`, protección de rutas, variables públicas, ingreso/cierre y sesión persistente en escritorio y celular. Un producto temporal se creó desde la web, persistió tras recargar y apareció en la navegación móvil; luego se borraron y comprobaron sus dos registros en Supabase. El distintivo de Netlify que tapaba la navegación móvil se desactivó desde el panel del proyecto. Faltan la prueba de correo recuperado y abierto desde Netlify, el recorrido financiero completo autenticado en HTTPS y las descargas CSV/PDF desde ese dominio.
 
 Si una ruta interna devuelve 404, revisá `netlify.toml` o `vercel.json`. Si Supabase rechaza la recuperación, revisá la Redirect URL exacta, el Site URL y SMTP. Si aparece un error de tabla o función inexistente, revisá las migraciones y sus permisos. Si una página queda sin datos, comprobá sesión y RLS antes de modificar políticas.

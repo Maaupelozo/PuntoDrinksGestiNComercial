@@ -13,10 +13,13 @@ Fecha: 2026-10-27. Rama: `feat/production-ready`, publicada en GitHub y desplega
 - `cleanup_module05_verification.sql` se ensayó sobre una copia local de los registros reales y dejó 14 tablas en cero. El propietario lo ejecutó en Supabase. Una comprobación posterior desde la cuenta temporal confirmó las 14 tablas y el reporte financiero en cero.
 - El propietario eliminó después la cuenta comercial temporal y se confirmó que sus credenciales ya no permiten iniciar sesión.
 - Netlify HTTPS: `/`, `/ingresar` y `/restablecer-clave` respondieron 200; la ruta privada `/stock` redirigió a ingreso. Escritorio y celular mostraron el título correcto, ingreso y recuperación sin errores de JavaScript. Los assets publicados contienen la URL y clave publicable de Supabase correctas.
+- Con una cuenta temporal nueva y vacía, el ingreso/cierre y la sesión persistente funcionaron desde Netlify en escritorio y celular. Un producto creado desde la web se comprobó en Supabase, se leyó desde la navegación móvil y persistió tras recargar. La limpieza revisada por el propietario dejó las 14 tablas de esa cuenta en cero.
+- El distintivo «Powered by Netlify» interceptó la navegación inferior en celular; el propietario lo desactivó desde Netlify y la navegación volvió a pasar.
+- La solicitud de recuperación desde Netlify incluyó la Redirect URL HTTPS exacta, pero Supabase respondió `429 over_email_send_rate_limit` por el proveedor de correo integrado. No se envió ni abrió un correo de recuperación desde ese dominio.
 
 ## Pendiente antes de usar datos comerciales reales
 
-- Configurar Site URL y Redirect URL exactas para Netlify en Supabase. Probar allí el inicio/cierre, datos temporales y recuperación por correo; las pruebas públicas HTTPS ya pasaron.
+- El propietario configuró Site URL y Redirect URL exactas para Netlify en Supabase. Falta probar allí la recepción del correo y el cambio de contraseña; la solicitud está limitada por el proveedor integrado.
 - Configurar SMTP propio en Supabase y repetir la prueba de recepción y cambio de contraseña desde el dominio HTTPS.
 - Ejecutar y comprobar una copia de seguridad y una restauración en un proyecto separado conforme a [BACKUP.md](../BACKUP.md).
 

@@ -27,7 +27,7 @@ export function LoginPage() {
       if (mode === 'login') await signIn(email.trim(), password)
       else {
         await requestPasswordReset(email.trim())
-        setMessage('Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña.')
+        setMessage('Si existe una cuenta con ese correo y podemos enviar el mensaje, recibirás un enlace. Si no llega, intentá más tarde.')
       }
     } catch (failure) {
       setError(errorMessage(failure))
