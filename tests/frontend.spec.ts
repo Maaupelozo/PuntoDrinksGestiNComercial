@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loadEnv } from 'vite'
+import { cordobaDate } from '../src/lib/procurement-rules'
 
 const projectUrl = loadEnv('development', process.cwd(), 'VITE_SUPABASE_').VITE_SUPABASE_URL
 const projectRef = new URL(projectUrl).hostname.split('.')[0]
@@ -16,7 +17,7 @@ const initialProducts = [
 
 type Product = typeof initialProducts[number]
 
-async function mockApi(page: Page, authenticated = true, failProducts = false) {
+async function mockApi(page: Page, authenticated = true, failProducts = false, reportDays = 1) {
   const mockUser = structuredClone(user)
   const mockSession = { ...session, user: mockUser }
   const resetRequests: any[] = []
@@ -97,14 +98,22 @@ async function mockApi(page: Page, authenticated = true, failProducts = false) {
       const start = body.p_start_date as string
       const end = body.p_end_date as string
       const within = (value: string) => value >= start && value < end
-      const selectedSales = sales.filter(item => within(item.sold_at.slice(0, 10)))
+      const selectedSales = sales.filter(item => within(cordobaDate(new Date(item.sold_at))))
       const selectedPurchases = purchases.filter(item => within(item.purchase_date))
       const selectedExpenses = expenses.filter(item => item.status === 'posted' && within(item.expense_date))
       const revenue = selectedSales.reduce((sum, item) => sum + item.total_amount, 0)
       const cogs = selectedSales.reduce((sum, item) => sum + item.total_cost, 0)
       const spending = selectedExpenses.reduce((sum, item) => sum + item.amount, 0)
       const bought = selectedPurchases.reduce((sum, item) => sum + item.total, 0)
-      const daily = [{ date: start, revenue, cogs, gross_profit: revenue - cogs, expenses: spending, purchases: bought, sales_count: selectedSales.length }]
+      const daily = Array.from({ length: reportDays }, (_, index) => ({
+        date: new Date(Date.parse(`${start}T12:00:00Z`) + index * 86_400_000).toISOString().slice(0, 10),
+        revenue: index === 0 ? revenue : 0,
+        cogs: index === 0 ? cogs : 0,
+        gross_profit: index === 0 ? revenue - cogs : 0,
+        expenses: index === 0 ? spending : 0,
+        purchases: index === 0 ? bought : 0,
+        sales_count: index === 0 ? selectedSales.length : 0,
+      }))
       return json({ period: { start, end_exclusive: end }, summary: { revenue, cogs, gross_profit: revenue - cogs, expenses: spending, net_operating_result: revenue - cogs - spending, purchases: bought, cashflow_estimate: revenue - bought - spending, sales_count: selectedSales.length, expense_count: selectedExpenses.length, purchase_count: selectedPurchases.length, average_ticket: selectedSales.length ? revenue / selectedSales.length : 0 }, daily, expense_categories: selectedExpenses.map(item => ({ category: item.category, total: item.amount, count: 1 })), top_products: [], top_purchased: [], supplier_totals: [], recent_sales: selectedSales.slice(-5).reverse(), inventory: { available_products: products.filter(item => item.is_active && item.stock_quantity > 0).length, low_stock_products: products.filter(item => item.is_active && item.stock_quantity > 0 && item.stock_quantity <= item.min_stock).length, out_of_stock_products: products.filter(item => item.is_active && item.stock_quantity === 0).length, estimated_value: products.reduce((sum, item) => sum + item.stock_quantity * item.unit_cost, 0), alerts: products.filter(item => item.is_active && item.stock_quantity <= item.min_stock).slice(0, 5) } })
     }
     if (path.endsWith('/combos')) return json(combos.slice().sort((a, b) => a.name.localeCompare(b.name)))
@@ -272,6 +281,30 @@ for (const [path, header, title] of sections) {
     expect(errors).toEqual([])
   })
 }
+
+test('reports fit the viewport and use page scrolling for daily data', async ({ page }) => {
+  await mockApi(page, true, false, 31)
+  await page.goto('/reportes')
+  await expect(page.locator('.finance-group-list').last().locator('.report-line')).toHaveCount(31)
+
+  const initialWidth = page.viewportSize()!.width
+  const widths = initialWidth === 390 ? [320, 390] : initialWidth === 1440 ? [1024, 1440] : [initialWidth]
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 844 })
+    const layout = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      page: document.documentElement.scrollWidth,
+      nested: [...document.querySelectorAll('.finance-group-list, .report-grid .finance-chart')].map(element => ({
+        client: element.clientHeight,
+        scroll: element.scrollHeight,
+      })),
+    }))
+    expect(layout.page, `Reportes desborda horizontalmente a ${width}px`).toBeLessThanOrEqual(layout.viewport)
+    expect(layout.nested.length).toBe(5)
+    for (const [index, item] of layout.nested.entries())
+      expect(item.scroll, `La sección ${index + 1} tiene scroll interno a ${width}px`).toBeLessThanOrEqual(item.client)
+  }
+})
 
 test('private route requires login, session survives reload, and logout clears it', async ({ page }) => {
   await mockApi(page, false)

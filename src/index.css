@@ -127,6 +127,17 @@
 @media(max-width:820px){.finance-filter{flex-direction:column;align-items:stretch}.finance-filter>div:last-child{display:flex;gap:8px}.expense-table .data-row>*:nth-child(5),.expense-table .data-row>*:nth-child(6){display:block!important}.expense-table .data-row{grid-template-columns:1fr auto!important}}
 @media(max-width:480px){.finance-metrics,.finance-comparison{grid-template-columns:1fr 1fr}.finance-period .select-field{min-width:125px;flex:1}.finance-period .select-field:first-child{flex-basis:100%}.expense-table .data-row>*:nth-child(5),.expense-table .data-row>*:nth-child(6){display:block!important}.expense-table .data-row>*:nth-child(5){grid-column:1/-1}}
 
+/* Reports keep their full content in the page flow at narrow widths. */
+.report-grid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+.report-grid>.panel{min-width:0}
+.report-grid .report-line strong{white-space:normal;overflow-wrap:anywhere;text-align:right}
+.report-grid .finance-chart{height:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(32px,1fr));gap:8px 5px;overflow:visible}
+.report-grid .finance-chart-column{width:100%;height:190px;min-width:0;max-width:none}
+.report-grid .finance-chart>.empty-state{grid-column:1/-1;min-width:0}
+.finance-group-list{max-height:none;overflow:visible}
+@media(max-width:1180px){.report-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.finance-filter>div{overflow:visible;flex-wrap:wrap}}
+
 .brand img{width:100%;height:100%;object-fit:cover;border-radius:10px}
 .settings-info{color:var(--muted);font-size:12px;line-height:1.6;margin:14px 0}
 .settings-subtitle,.settings-section h3{font-size:14px;margin:30px 0 0}
