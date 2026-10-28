@@ -1,4 +1,5 @@
 {
+  "title": "Punto Drinks",
   "description": "Gestiona ventas, inventario, compras, gastos y rentabilidad en un solo lugar para ayudar a negocios de bebidas a controlar sus operaciones y tomar mejores decisiones.",
   "robots": {
     "index": false

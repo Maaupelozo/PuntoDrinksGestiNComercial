@@ -1,0 +1,1 @@
+export type IconName = "grid" | "sale" | "box" | "chart" | "cart" | "wallet" | "gift" | "report" | "truck" | "settings" | "search" | "bell" | "plus" | "chevron" | "dots" | "arrow" | "calendar" | "download" | "menu" | "check" | "warning"
