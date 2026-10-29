@@ -17,7 +17,7 @@ const initialProducts = [
 
 type Product = typeof initialProducts[number]
 
-async function mockApi(page: Page, authenticated = true, failProducts = false, reportDays = 1) {
+async function mockApi(page: Page, authenticated = true, failProducts = false, reportDays = 1, withHistory = false) {
   const mockUser = structuredClone(user)
   const mockSession = { ...session, user: mockUser }
   const resetRequests: any[] = []
@@ -68,7 +68,7 @@ async function mockApi(page: Page, authenticated = true, failProducts = false, r
     const path = url.pathname
     const body = route.request().postDataJSON() as Record<string, any> | null
     const json = (data: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
-    if (path.endsWith('/historical_records')) return json([
+    if (path.endsWith('/historical_records')) return json(withHistory ? [
       { id: '90000000-0000-4000-8000-000000000001', owner_id: userId,
         source_key: 'test-sale-01', source_fingerprint: 'a'.repeat(32),
         kind: 'sale', business_date: '2026-10-09', description: 'Venta de prueba',
@@ -80,12 +80,17 @@ async function mockApi(page: Page, authenticated = true, failProducts = false, r
         kind: 'expense', business_date: '2026-10-10', description: 'No detallado',
         quantity: null, amount: 300, record_status: 'unclassified',
         details: { source: 'Prueba local', paymentMethod: null }, imported_at: now },
+      { id: '90000000-0000-4000-8000-000000000004', owner_id: userId,
+        source_key: 'test-purchase-01', source_fingerprint: 'd'.repeat(32),
+        kind: 'purchase', business_date: '2026-10-10', description: 'Compra de prueba',
+        quantity: null, amount: 500, record_status: 'allocation_pending',
+        details: { source: 'Prueba local', paymentMethod: null }, imported_at: now },
       { id: '90000000-0000-4000-8000-000000000003', owner_id: userId,
         source_key: 'test-count-01', source_fingerprint: 'c'.repeat(32),
         kind: 'count', business_date: '2026-10-28', description: 'Producto C',
         quantity: 3, amount: null, record_status: 'counted',
         details: { source: 'Prueba local' }, imported_at: now },
-    ])
+    ] : [])
     if (path.endsWith('/business_settings')) {
       if (route.request().method() === 'PATCH' || route.request().method() === 'POST') Object.assign(settings, body, { updated_at: new Date().toISOString() })
       return json(settings)
@@ -324,8 +329,8 @@ test('reports fit the viewport and use page scrolling for daily data', async ({ 
   }
 })
 
-test('historical ledger shows exact dated entries and unknown details without altering operational reports', async ({ page }) => {
-  await mockApi(page)
+test('historical ledger feeds dated report amounts while profit remains pending', async ({ page }) => {
+  await mockApi(page, true, false, 1, true)
   await page.goto('/historico')
   await expect(page.locator('.mini-stats')).toContainText('1.200')
   await expect(page.locator('.historical-records')).toContainText('Venta de prueba')
@@ -337,7 +342,16 @@ test('historical ledger shows exact dated entries and unknown details without al
   await expect(page.locator('.historical-count')).toContainText('3 unidades')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await navigate(page, 'Reportes')
-  await expect(page.locator('.finance-summary')).toContainText('0')
+  await expect(page.locator('.finance-summary')).toContainText('1.200')
+  await expect(page.locator('.finance-summary')).toContainText('300')
+  await expect(page.locator('.finance-summary')).toContainText('500')
+  await expect(page.locator('.finance-summary')).toContainText('Pendiente')
+  await navigate(page, 'Ventas')
+  await page.getByRole('button', { name: 'Ver historial' }).click()
+  await expect(page.locator('.mini-stats')).toContainText('1.200')
+  await expect(page.locator('.mini-stats')).toContainText('Pendiente')
+  await navigate(page, 'Compras')
+  await expect(page.locator('.mini-stats')).toContainText('500')
 })
 
 test('private route requires login, session survives reload, and logout clears it', async ({ page }) => {

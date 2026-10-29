@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase'
 import { validateExpense } from '../lib/finance-rules'
+import { mergeHistoricalReport } from '../lib/merge-historical-report'
 import type { DateRange, ExpenseInput, ExpenseRecord, FinancialReport } from '../types/finance'
 
 export async function listExpenses(range: DateRange): Promise<ExpenseRecord[]> {
@@ -43,9 +44,20 @@ export async function voidExpense(id: string, reason: string) {
   return data
 }
 export async function getFinancialReport(range: DateRange): Promise<FinancialReport> {
-  const { data, error } = await requireSupabase().rpc('financial_report', {
+  const client = requireSupabase()
+  const { data, error } = await client.rpc('financial_report', {
     p_start_date: range.start, p_end_date: range.endExclusive,
   })
   if (error) throw error
-  return data
+  const records = []
+  for (let from = 0; ; from += 500) {
+    const { data: page, error: historyError } = await client.from('historical_records')
+      .select('kind,business_date,amount').gte('business_date', range.start)
+      .lt('business_date', range.endExclusive).neq('kind', 'count')
+      .order('business_date').order('id').range(from, from + 499)
+    if (historyError) throw historyError
+    records.push(...(page ?? []))
+    if (!page || page.length < 500) break
+  }
+  return mergeHistoricalReport(data, records, range)
 }

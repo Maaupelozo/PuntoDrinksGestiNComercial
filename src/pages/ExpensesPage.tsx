@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { Module } from '../components/ui/Module'
 import { MiniStats } from '../components/ui/MiniStats'
 import { Search } from '../components/ui/Search'
@@ -94,6 +95,7 @@ export function ExpensesPage() {
     {notice && <StatusMessage tone="success" message={notice}/>}
     {(error || reportError) && <StatusMessage message={error || reportError || ''}/>}
     <MiniStats stats={stats}/>
+    {!!report?.historical?.expense_rows && <p className="historical-notice">El total incluye {report.historical.expense_rows} gastos históricos «No detallado». Su detalle está en <Link to="/historico">Histórico de octubre</Link>; esta lista muestra los gastos registrados desde la aplicación.</p>}
     <PeriodPicker preset={preset} onPreset={setPreset} from={from} to={to} onFrom={setFrom} onTo={setTo} error={periodError}/>
     <div className="toolbar"><Search value={search} onChange={setSearch} placeholder="Buscar gastos..."/><div className="filter-wrap">
       <select aria-label="Filtrar categoría" value={category} onChange={event => setCategory(event.target.value)}><option value="all">Todas las categorías</option>{categories.map(value => <option value={value} key={value}>{value}</option>)}</select>

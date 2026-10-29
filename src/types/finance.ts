@@ -23,18 +23,23 @@ export interface DateRange {
   label: string
 }
 export interface FinancialSummary {
-  revenue: number; cogs: number; gross_profit: number; expenses: number
-  net_operating_result: number; purchases: number; cashflow_estimate: number
+  revenue: number; cogs: number | null; gross_profit: number | null; expenses: number
+  net_operating_result: number | null; purchases: number; cashflow_estimate: number
   sales_count: number; expense_count: number; purchase_count: number
-  average_ticket: number
+  average_ticket: number | null
 }
 export interface FinancialDay {
-  date: string; revenue: number; cogs: number; gross_profit: number
+  date: string; revenue: number; cogs: number | null; gross_profit: number | null
   expenses: number; purchases: number; sales_count: number
+}
+export interface HistoricalReportTotals {
+  sale_rows: number; expense_rows: number; purchase_rows: number
+  revenue: number; expenses: number; purchases: number
 }
 export interface FinancialReport {
   period: { start: string; end_exclusive: string }
   summary: FinancialSummary
+  historical?: HistoricalReportTotals
   daily: FinancialDay[]
   expense_categories: { category: string; total: number; count: number }[]
   top_products: { product_id: string; name: string; units: number; direct_revenue: number }[]

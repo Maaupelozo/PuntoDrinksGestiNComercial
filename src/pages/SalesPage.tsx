@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { Search } from '../components/ui/Search'
@@ -11,6 +12,7 @@ import { LoadingRows } from '../components/ui/LoadingRows'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { useInventory } from '../context/InventoryContext'
 import { useSales } from '../context/SalesContext'
+import { useHistoricalRecords } from '../hooks/useHistoricalRecords'
 import { confirmSale } from '../services/sales'
 import { cartNeeds, comboAvailability, comboCost } from '../lib/sales-rules'
 import { cordobaDate, purchaseTimeZone } from '../lib/procurement-rules'
@@ -30,6 +32,7 @@ const dateTime = (value: string) => new Date(value).toLocaleString('es-AR', { ti
 export function SalesPage() {
   const { products, loading: inventoryLoading, error: inventoryError, refresh: refreshInventory } = useInventory()
   const { combos, comboItems, sales, saleItems, components, loading, error, refresh } = useSales()
+  const { records: historicalRecords, loading: historyLoading, error: historyError } = useHistoricalRecords()
   const [view, setView] = useState<View>('new')
   const [search, setSearch] = useState('')
   const [catalog, setCatalog] = useState<'all' | 'products' | 'combos'>('all')
@@ -77,13 +80,25 @@ export function SalesPage() {
   })
   const todaySales = sales.filter(sale => localDate(sale.sold_at) === today)
   const monthSales = sales.filter(sale => localDate(sale.sold_at).startsWith(month))
-  const count = filteredSales.length
+  const historicalSales = historicalRecords.filter(record => record.kind === 'sale')
+  const filteredHistorical = historicalSales.filter(record => {
+    const date = record.business_date
+    const inPeriod = period === 'all' || period === 'today' && date === today ||
+      period === 'month' && date.startsWith(month) || period === 'custom' &&
+      (!fromDate || date >= fromDate) && (!toDate || date <= toDate)
+    return inPeriod && [record.description, ...(record.details.components?.map(item => item.name) ?? [])]
+      .some(value => value.toLocaleLowerCase().includes(historySearch.toLocaleLowerCase()))
+  })
+  const sumHistorical = (records: typeof historicalSales) => records.reduce((sum, record) => sum + Number(record.amount), 0)
+  const todayHistory = historicalSales.filter(record => record.business_date === today)
+  const monthHistory = historicalSales.filter(record => record.business_date.startsWith(month))
+  const count = filteredSales.length + filteredHistorical.length
   const stats: [string, string, string][] = [
-    ['Vendido hoy', money(todaySales.reduce((sum, sale) => sum + Number(sale.total_amount), 0)), `${todaySales.length} ventas`],
-    ['Vendido este mes', money(monthSales.reduce((sum, sale) => sum + Number(sale.total_amount), 0)), `${monthSales.length} ventas`],
-    ['Ventas del período', String(count), `${period === 'all' ? 'Todo el historial' : period === 'today' ? 'Hoy' : period === 'month' ? 'Este mes' : 'Personalizado'}`],
-    ['Ganancia bruta', money(filteredSales.reduce((sum, sale) => sum + Number(sale.gross_profit), 0)), 'Antes de gastos operativos'],
-    ['Ticket promedio', money(count ? filteredSales.reduce((sum, sale) => sum + Number(sale.total_amount), 0) / count : 0), `${count} operaciones`],
+    ['Vendido hoy', money(todaySales.reduce((sum, sale) => sum + Number(sale.total_amount), 0) + sumHistorical(todayHistory)), `${todaySales.length} ventas${todayHistory.length ? ` + ${todayHistory.length} renglones históricos` : ''}`],
+    ['Vendido este mes', money(monthSales.reduce((sum, sale) => sum + Number(sale.total_amount), 0) + sumHistorical(monthHistory)), `${monthSales.length} ventas${monthHistory.length ? ` + ${monthHistory.length} renglones históricos` : ''}`],
+    [filteredHistorical.length ? 'Operaciones y renglones' : 'Ventas del período', String(count), `${period === 'all' ? 'Todo el historial' : period === 'today' ? 'Hoy' : period === 'month' ? 'Este mes' : 'Personalizado'}`],
+    ['Ganancia bruta', filteredHistorical.length ? 'Pendiente' : money(filteredSales.reduce((sum, sale) => sum + Number(sale.gross_profit), 0)), filteredHistorical.length ? 'Faltan costos históricos' : 'Antes de gastos operativos'],
+    ['Ticket promedio', filteredHistorical.length ? 'Pendiente' : money(count ? filteredSales.reduce((sum, sale) => sum + Number(sale.total_amount), 0) / count : 0), filteredHistorical.length ? 'Los renglones no identifican tickets' : `${count} operaciones`],
   ]
 
   function changeCart(next: CartLine[]) {
@@ -161,12 +176,14 @@ export function SalesPage() {
       </aside>
       {cart.length > 0 && <button className="mobile-cart-jump" onClick={() => document.getElementById('sales-checkout')?.scrollIntoView({ behavior: 'smooth' })}>Ver carrito · {cart.reduce((sum, line) => sum + line.quantity, 0)} · {money(total)}</button>}
     </div> : <section className="panel module-panel">
+      {historyError && <StatusMessage message={historyError}/>}
       <MiniStats stats={stats}/>
+      {!!historicalSales.length && <p className="historical-notice">Los importes históricos se incluyen en estos totales. Sus renglones y productos están en <Link to="/historico">Histórico de octubre</Link>; esta lista muestra ventas registradas desde la aplicación.</p>}
       <div className="toolbar"><Search value={historySearch} onChange={setHistorySearch} placeholder="Buscar venta o artículo..."/><div className="filter-wrap"><select aria-label="Filtrar período de ventas" value={period} onChange={event => setPeriod(event.target.value as Period)}><option value="today">Hoy</option><option value="month">Este mes</option><option value="all">Todo el historial</option><option value="custom">Período personalizado</option></select></div></div>
       {period === 'custom' && <div className="period-fields"><label className="select-field">Desde<input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)}/></label><label className="select-field">Hasta<input type="date" value={toDate} min={fromDate || undefined} onChange={event => setToDate(event.target.value)}/></label></div>}
-      {loading ? <LoadingRows/> : filteredSales.length ? <div className="data-table generic sales-table"><div className="data-row data-head"><span>Venta</span><span>Fecha y hora</span><span>Artículos</span><span>Pago</span><span>Total / ganancia</span><span>Estado</span></div>
+      {loading || historyLoading ? <LoadingRows/> : filteredSales.length ? <div className="data-table generic sales-table"><div className="data-row data-head"><span>Venta</span><span>Fecha y hora</span><span>Artículos</span><span>Pago</span><span>Total / ganancia</span><span>Estado</span></div>
         {filteredSales.map(sale => <div className="data-row" key={sale.id}><span><button className="product-name" onClick={() => setDetail(sale)}>#{sale.sale_number.slice(0, 8).toUpperCase()}</button></span><span>{dateTime(sale.sold_at)}</span><span>{saleItems.filter(item => item.sale_id === sale.id).map(item => `${item.quantity}× ${item.item_name}`).join(' · ')}</span><span>{paymentLabels[sale.payment_method]}</span><strong>{money(sale.total_amount)}<small className="sale-profit">Ganancia {money(sale.gross_profit)}</small></strong><span><Badge type="success">Confirmada</Badge></span></div>)}</div>
-      : <div className="empty-state">No hay ventas en este período.</div>}
+      : <div className="empty-state">{filteredHistorical.length ? 'Las ventas de este período están en Histórico de octubre.' : 'No hay ventas en este período.'}</div>}
       <div className="procurement-reports"><section className="panel"><h3>Últimas ventas</h3>{sales.slice(0, 5).map(sale => <div className="report-line" key={sale.id}><button className="product-name" onClick={() => setDetail(sale)}>#{sale.sale_number.slice(0, 8).toUpperCase()} · {dateTime(sale.sold_at)}</button><strong>{money(sale.total_amount)}</strong></div>)}{!sales.length && <p>Sin ventas confirmadas.</p>}</section></div>
     </section>}
     {prepared && <Modal title="Confirmar venta" onClose={() => { if (!busy) setPrepared(null) }}>

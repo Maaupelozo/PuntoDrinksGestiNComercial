@@ -1,7 +1,7 @@
-import { money } from '../utils/money'
+import { money, moneyOrPending } from '../utils/money'
 import type { DateRange, FinancialReport } from '../types/finance'
 
-export function financialSummaryRows(report: FinancialReport): [string, number][] {
+export function financialSummaryRows(report: FinancialReport): [string, number | null][] {
   const value = report.summary
   return [
     ['Ingresos por ventas', value.revenue],
@@ -10,7 +10,7 @@ export function financialSummaryRows(report: FinancialReport): [string, number][
     ['Gastos operativos', value.expenses],
     ['Resultado neto operativo', value.net_operating_result],
     ['Compras de mercadería (separadas)', value.purchases],
-    ['Flujo de caja registrado (estimado)', value.cashflow_estimate],
+    ['Balance de importes (no caja conciliada)', value.cashflow_estimate],
   ]
 }
 const amount = (value: number) => Number(value).toFixed(2).replace('.', ',')
@@ -18,18 +18,20 @@ function cell(value: string) {
   const safe = /^[\s]*[=+\-@\t\r]/.test(value) ? `'${value}` : value
   return `"${safe.replace(/"/g, '""')}"`
 }
-const line = (values: (string | number)[]) => values.map(value =>
-  typeof value === 'number' ? amount(value) : cell(value)).join(';')
+const line = (values: (string | number | null)[]) => values.map(value =>
+  value === null ? cell('Pendiente') : typeof value === 'number' ? amount(value) : cell(value)).join(';')
 
 export function buildReportCsv(report: FinancialReport, range: DateRange) {
   const lines = [
     'sep=;', line(['Punto Drinks', 'Reporte financiero']), line(['Período', range.label]),
     '', line(['Resumen', 'Importe (ARS)']),
     ...financialSummaryRows(report).map(([label, value]) => line([label, value])),
+    ...(report.historical ? [line(['Histórico incluido', `${report.historical.sale_rows} renglones de venta; ${report.historical.expense_rows} gastos; ${report.historical.purchase_rows} compras`]),
+      line(['Nota', 'Los costos históricos y el ticket promedio están pendientes. El flujo es una diferencia de importes, no caja conciliada.'])] : []),
     '', line(['Fecha', 'Ventas', 'Costo vendido', 'Ganancia bruta', 'Gastos operativos',
-      'Resultado operativo', 'Compras de mercadería', 'Flujo de caja estimado', 'Ventas (cantidad)']),
+      'Resultado operativo', 'Compras de mercadería', 'Balance de importes', 'Operaciones/renglones']),
     ...report.daily.map(day => line([day.date, day.revenue, day.cogs, day.gross_profit,
-      day.expenses, day.gross_profit - day.expenses, day.purchases,
+      day.expenses, day.gross_profit === null ? null : day.gross_profit - day.expenses, day.purchases,
       day.revenue - day.purchases - day.expenses, day.sales_count])),
     '', line(['Categoría de gasto', 'Importe (ARS)', 'Registros']),
     ...report.expense_categories.map(item => line([item.category, item.total, item.count])),
@@ -73,13 +75,13 @@ export async function buildReportPdf(report: FinancialReport, range: DateRange) 
       .setFontSize(label === 'Resultado neto operativo' ? 12 : 10)
       .setTextColor(label === 'Resultado neto operativo' ? 214 : 35, 35, 39)
     pdf.text(label, 18, y)
-    pdf.text(money(value).replace(/\u00a0|\u202f/g, ' '), 192, y, { align: 'right' })
+    pdf.text(moneyOrPending(value).replace(/\u00a0|\u202f/g, ' '), 192, y, { align: 'right' })
     y += label === 'Resultado neto operativo' ? 13 : 10
   }
   pdf.setFont('helvetica', 'normal').setFontSize(9).setTextColor(95, 95, 100)
-  pdf.text(`Ventas confirmadas: ${report.summary.sales_count}  |  Ticket promedio: ${money(report.summary.average_ticket)}`, 18, y + 8)
-  pdf.text('Resultado operativo antes de impuestos y ajustes contables.', 18, y + 18)
-  pdf.text('El flujo de caja es estimado: no equivale a un saldo conciliado.', 18, y + 24)
+  pdf.text(`${report.historical?.sale_rows ? 'Operaciones y renglones históricos' : 'Ventas confirmadas'}: ${report.summary.sales_count}  |  Ticket promedio: ${moneyOrPending(report.summary.average_ticket)}`, 18, y + 8)
+  pdf.text(report.historical?.sale_rows ? 'Ganancia pendiente: faltan costos de ventas históricas.' : 'Resultado operativo antes de impuestos y ajustes contables.', 18, y + 18)
+  pdf.text('El flujo es una diferencia de importes, no un saldo de caja conciliado.', 18, y + 24)
   pdf.text('Las compras de mercadería no se descuentan dos veces de la ganancia.', 18, y + 30)
   return pdf
 }

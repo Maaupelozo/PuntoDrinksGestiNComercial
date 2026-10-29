@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Module } from '../components/ui/Module'
 import { MiniStats } from '../components/ui/MiniStats'
 import { Search } from '../components/ui/Search'
 import { LoadingRows } from '../components/ui/LoadingRows'
 import { StatusMessage } from '../components/ui/StatusMessage'
-import { listHistoricalRecords } from '../services/historical'
-import { errorMessage } from '../lib/errors'
+import { useHistoricalRecords } from '../hooks/useHistoricalRecords'
 import { money } from '../utils/money'
 import type { HistoricalKind, HistoricalRecord } from '../types/historical'
 
@@ -24,20 +23,9 @@ const sum = (records: HistoricalRecord[], kind: HistoricalKind) =>
   records.filter(record => record.kind === kind).reduce((total, record) => total + Number(record.amount ?? 0), 0)
 
 export function HistoricalPage() {
-  const [records, setRecords] = useState<HistoricalRecord[]>([])
+  const { records, loading, error } = useHistoricalRecords()
   const [kind, setKind] = useState<HistoricalKind>('sale')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let active = true
-    listHistoricalRecords().then(data => { if (active) { setRecords(data); setError(null) } })
-      .catch(failure => { if (active) setError(errorMessage(failure)) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [])
-
   const filtered = records.filter(record => record.kind === kind &&
     [record.description, record.details.note ?? '', ...(record.details.components?.map(item => item.name) ?? [])]
       .some(value => value.toLocaleLowerCase().includes(search.toLocaleLowerCase())))
@@ -52,7 +40,7 @@ export function HistoricalPage() {
     {error && <StatusMessage message={error}/>}
     {loading ? <LoadingRows/> : <>
       <MiniStats stats={stats}/>
-      <p className="historical-notice">Estos registros conservan las fechas y los importes originales. Los costos históricos, medios de pago y algunas asignaciones de producto siguen pendientes. Por eso todavía no integran la ganancia ni modifican el stock operativo de Dashboard y Reportes.</p>
+      <p className="historical-notice">Estos registros conservan las fechas y los importes originales. Sus ventas, gastos y compras suman en Dashboard y Reportes. Los costos históricos, medios de pago y algunas asignaciones de producto siguen pendientes; la ganancia queda sin calcular y el conteo físico no modifica el stock actual.</p>
       <div className="historical-controls"><div className="finance-grouping">{tabs.map(tab =>
         <button type="button" key={tab.kind} className={kind === tab.kind ? 'active' : ''} onClick={() => setKind(tab.kind)}>{tab.label} ({records.filter(record => record.kind === tab.kind).length})</button>)}</div>
         <Search value={search} onChange={setSearch} placeholder="Buscar en el histórico..."/>

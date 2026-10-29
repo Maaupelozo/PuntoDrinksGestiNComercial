@@ -5,3 +5,5 @@ export const money = (value: number) =>
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
     maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
   }).format(value)
+
+export const moneyOrPending = (value: number | null) => value === null ? 'Pendiente' : money(value)

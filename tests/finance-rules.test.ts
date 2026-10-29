@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, groupFinancialDays, periodRange, previousEquivalentRange,
   validateExpense } from '../src/lib/finance-rules'
 import { buildReportCsv, buildReportPdf, financialSummaryRows } from '../src/lib/report-export'
+import { mergeHistoricalReport } from '../src/lib/merge-historical-report'
 import type { FinancialReport } from '../src/types/finance'
 
 describe('financial periods and exports', () => {
@@ -51,5 +52,41 @@ describe('financial periods and exports', () => {
     const pdf = await buildReportPdf(report, range)
     expect(pdf.output()).toContain('%PDF-')
     expect(pdf.getNumberOfPages()).toBe(1)
+  })
+
+  it('includes historical amounts by date without inventing costs or ticket averages', () => {
+    const range = { start: '2026-10-01', endExclusive: '2026-11-01', label: 'Octubre' }
+    const base: FinancialReport = {
+      period: { start: range.start, end_exclusive: range.endExclusive },
+      summary: { revenue: 100, cogs: 60, gross_profit: 40, expenses: 10,
+        net_operating_result: 30, purchases: 20, cashflow_estimate: 70,
+        sales_count: 1, expense_count: 1, purchase_count: 1, average_ticket: 100 },
+      daily: [{ date: '2026-10-09', revenue: 100, cogs: 60, gross_profit: 40,
+        expenses: 10, purchases: 20, sales_count: 1 }],
+      expense_categories: [{ category: 'Otros gastos', total: 10, count: 1 }],
+      top_products: [], top_purchased: [], supplier_totals: [], recent_sales: [],
+      inventory: { available_products: 0, low_stock_products: 0,
+        out_of_stock_products: 0, estimated_value: 0, alerts: [] },
+    }
+    const records = [
+      { kind: 'sale' as const, business_date: '2026-10-09', amount: 1200 },
+      { kind: 'expense' as const, business_date: '2026-10-10', amount: 300 },
+      { kind: 'purchase' as const, business_date: '2026-10-10', amount: 500 },
+      { kind: 'count' as const, business_date: '2026-10-28', amount: null },
+      { kind: 'sale' as const, business_date: '2026-09-30', amount: 999 },
+    ]
+    expect(mergeHistoricalReport(base, [], range)).toBe(base)
+    const merged = mergeHistoricalReport(base, records, range)
+    expect(merged.summary).toMatchObject({ revenue: 1300, cogs: null,
+      gross_profit: null, expenses: 310, net_operating_result: null,
+      purchases: 520, cashflow_estimate: 470, sales_count: 2,
+      expense_count: 2, purchase_count: 2, average_ticket: null })
+    expect(merged.historical).toMatchObject({ sale_rows: 1, expense_rows: 1, purchase_rows: 1 })
+    expect(merged.daily).toHaveLength(2)
+    expect(merged.daily[0]).toMatchObject({ revenue: 1300, cogs: null, gross_profit: null })
+    expect(merged.expense_categories).toContainEqual({ category: 'No detallado', total: 300, count: 1 })
+    const csv = buildReportCsv(merged, range)
+    expect(csv).toContain('"Ganancia bruta";"Pendiente"')
+    expect(csv).toContain('"No detallado";300,00;1,00')
   })
 })
