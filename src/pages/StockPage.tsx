@@ -101,7 +101,7 @@ export function StockPage() {
       {dialog.kind === 'details' && <><div className="detail-grid">
         <div><span>Nombre</span><b>{dialog.product.name}</b></div><div><span>Categoría</span><b>{dialog.product.category}</b></div>
         <div><span>SKU</span><b>{dialog.product.sku ?? 'Sin SKU'}</b></div><div><span>Stock</span><b>{dialog.product.stock_quantity} un.</b></div>
-        <div><span>Stock mínimo</span><b>{dialog.product.min_stock} un.</b></div><div><span>Costo unitario</span><b>{money(dialog.product.unit_cost)}</b></div>
+        <div><span>Stock mínimo</span><b>{dialog.product.min_stock} un.</b></div><div><span>Costo unitario</span><b>{Number(dialog.product.unit_cost) <= 0 ? 'Pendiente' : money(dialog.product.unit_cost)}</b></div>
         <div><span>Precio de venta</span><b>{money(dialog.product.sale_price)}</b></div><div><span>Estado</span><b>{dialog.product.is_active ? 'Activo' : 'Inactivo'}</b></div>
       </div><div className="form-actions"><Button secondary onClick={() => open({ kind: 'history', product: dialog.product })}>Movimientos</Button>{dialog.product.is_active && <><Button secondary onClick={() => open({ kind: 'movement', product: dialog.product })}>Ajustar stock</Button><Button secondary onClick={() => open({ kind: 'deactivate', product: dialog.product })}>Desactivar</Button><Button onClick={() => open({ kind: 'edit', product: dialog.product })}>Editar</Button></>}</div></>}
       {dialog.kind === 'movement' && <StockMovementForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async input => { await adjustStock(input, dialog.product.stock_quantity); await refresh(); setDialog(null); setNotice('Movimiento de stock registrado.') }}/>}

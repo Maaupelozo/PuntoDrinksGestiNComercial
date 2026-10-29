@@ -40,7 +40,7 @@ export default function App() {
         <Route path="compras" element={<InventoryRoute><ProcurementProvider><PurchasesPage /></ProcurementProvider></InventoryRoute>} />
         <Route path="gastos" element={<ExpensesPage />} />
         <Route path="combos" element={<InventoryRoute><SalesProvider><CombosPage /></SalesProvider></InventoryRoute>} />
-        <Route path="reportes" element={<ReportsPage />} />
+        <Route path="reportes" element={<InventoryRoute><ReportsPage /></InventoryRoute>} />
         <Route path="historico" element={<HistoricalPage />} />
         <Route path="proveedores" element={<ProcurementProvider><SuppliersPage /></ProcurementProvider>} />
         <Route path="configuracion" element={<SettingsPage />} />

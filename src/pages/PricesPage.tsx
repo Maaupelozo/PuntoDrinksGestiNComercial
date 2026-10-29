@@ -90,11 +90,11 @@ export function PricesPage() {
     <div className="price-layout"><div>
       {loading ? <LoadingRows/> : filtered.length ? <div className="data-table price-table">
         <div className="data-row data-head"><span>Producto</span><span>Costo unitario</span><span>Precio venta</span><span>Ganancia</span><span>Margen / Recargo</span><span/></div>
-        {filtered.map(product => { const metrics = profitability(product.unit_cost, product.sale_price); return <div className="data-row" key={product.id}>
+        {filtered.map(product => { const metrics = profitability(product.unit_cost, product.sale_price); const pendingCost = Number(product.unit_cost) <= 0; return <div className="data-row" key={product.id}>
           <span className="product-cell"><ProductPic product={product}/><button className="product-name" onClick={() => setDialog({ kind: 'details', product })}>{product.name}</button></span>
-          <span>{money(product.unit_cost)}</span><strong>{money(product.sale_price)}</strong>
-          <span className={metrics.profit < 0 ? 'profit negative' : 'profit'}>{money(metrics.profit)}</span>
-          <span><b>{percent(metrics.margin)}</b><small>{percent(metrics.markup)} sobre costo</small>{metrics.profit < 0 && <Badge type="danger">Margen negativo</Badge>}</span>
+          <span>{pendingCost ? 'Pendiente' : money(product.unit_cost)}</span><strong>{money(product.sale_price)}</strong>
+          <span className={metrics.profit < 0 ? 'profit negative' : 'profit'}>{pendingCost ? 'Pendiente' : money(metrics.profit)}</span>
+          <span><b>{pendingCost ? '—' : percent(metrics.margin)}</b><small>{pendingCost ? 'Costo por confirmar' : `${percent(metrics.markup)} sobre costo`}</small>{!pendingCost && metrics.profit < 0 && <Badge type="danger">Margen negativo</Badge>}</span>
           <button aria-label={`Ver precios de ${product.name}`} title={`Ver precios de ${product.name}`} onClick={() => setDialog({ kind: 'details', product })}><Icon name="dots"/></button>
         </div>})}
       </div> : <div className="empty-state">No hay productos para mostrar. Agregá uno desde Control de stock.</div>}
@@ -117,7 +117,7 @@ export function PricesPage() {
     {dialog && <Modal title={dialog.kind === 'history' ? `Historial de ${dialog.product.name}` : dialog.kind === 'edit' ? 'Editar costo y precio' : dialog.product.name} onClose={() => setDialog(null)}>
       {dialog.kind === 'edit' && <PriceForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async (unitCost, salePrice) => { await updatePrices(dialog.product.id, unitCost, salePrice); await refresh(); setDialog(null); setNotice(`Precio de ${dialog.product.name} actualizado.`) }}/ >}
       {dialog.kind === 'history' && <HistoryList kind="price" productId={dialog.product.id}/>}
-      {dialog.kind === 'details' && <><div className="detail-grid"><div><span>Producto</span><b>{dialog.product.name}</b></div><div><span>Costo</span><b>{money(dialog.product.unit_cost)}</b></div><div><span>Precio de venta</span><b>{money(dialog.product.sale_price)}</b></div><div><span>Ganancia por unidad</span><b>{money(profitability(dialog.product.unit_cost, dialog.product.sale_price).profit)}</b></div><div><span>Margen bruto</span><b>{percent(profitability(dialog.product.unit_cost, dialog.product.sale_price).margin)}</b></div><div><span>Sobre costo</span><b>{percent(profitability(dialog.product.unit_cost, dialog.product.sale_price).markup)}</b></div></div><div className="form-actions"><Button secondary onClick={() => setDialog({ kind: 'history', product: dialog.product })}>Historial</Button><Button onClick={() => setDialog({ kind: 'edit', product: dialog.product })}>Editar</Button></div></>}
+      {dialog.kind === 'details' && <><div className="detail-grid"><div><span>Producto</span><b>{dialog.product.name}</b></div><div><span>Costo</span><b>{Number(dialog.product.unit_cost) <= 0 ? 'Pendiente' : money(dialog.product.unit_cost)}</b></div><div><span>Precio de venta</span><b>{money(dialog.product.sale_price)}</b></div><div><span>Ganancia por unidad</span><b>{Number(dialog.product.unit_cost) <= 0 ? 'Pendiente' : money(profitability(dialog.product.unit_cost, dialog.product.sale_price).profit)}</b></div><div><span>Margen bruto</span><b>{Number(dialog.product.unit_cost) <= 0 ? '—' : percent(profitability(dialog.product.unit_cost, dialog.product.sale_price).margin)}</b></div><div><span>Sobre costo</span><b>{Number(dialog.product.unit_cost) <= 0 ? '—' : percent(profitability(dialog.product.unit_cost, dialog.product.sale_price).markup)}</b></div></div><div className="form-actions"><Button secondary onClick={() => setDialog({ kind: 'history', product: dialog.product })}>Historial</Button><Button onClick={() => setDialog({ kind: 'edit', product: dialog.product })}>Editar</Button></div></>}
     </Modal>}
   </Module>
 }

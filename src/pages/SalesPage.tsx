@@ -53,6 +53,10 @@ export function SalesPage() {
   const month = today.slice(0, 7)
   const currentProducts = products.filter(product => product.is_active)
   const currentCombos = combos.filter(combo => combo.is_active)
+  const missingCost = (line: CartLine) => line.kind === 'product'
+    ? Number(products.find(product => product.id === line.id)?.unit_cost ?? 0) <= 0
+    : comboItems.filter(item => item.combo_id === line.id).some(item =>
+      Number(products.find(product => product.id === item.product_id)?.unit_cost ?? 0) <= 0)
   const inputItems = (lines: CartLine[]) => lines.map(line => ({
     ...(line.kind === 'product' ? { productId: line.id } : { comboId: line.id }),
     quantity: line.quantity,
@@ -108,6 +112,10 @@ export function SalesPage() {
     setActionError(null)
   }
   function add(kind: CartLine['kind'], id: string) {
+    if (missingCost({ kind, id, quantity: 1 })) {
+      setActionError('Cargá el costo pendiente en Precios antes de vender este artículo.')
+      return
+    }
     const current = cart.find(line => line.kind === kind && line.id === id)
     const next = current ? cart.map(line => line === current ? { ...line, quantity: line.quantity + 1 } : line)
       : [...cart, { kind, id, quantity: 1 }]
@@ -119,6 +127,7 @@ export function SalesPage() {
   }
   function prepare() {
     if (!cart.length || shortage) return
+    if (cart.some(missingCost)) { setActionError('Cargá los costos pendientes en Precios antes de confirmar la venta.'); return }
     setActionError(null)
     idempotencyKey.current ??= crypto.randomUUID()
     setPrepared({ idempotencyKey: idempotencyKey.current, paymentMethod: method, items: inputItems(cart) })
@@ -147,15 +156,16 @@ export function SalesPage() {
           <select aria-label="Filtrar catálogo" value={catalog} onChange={event => setCatalog(event.target.value as typeof catalog)}><option value="all">Todos</option><option value="products">Productos</option><option value="combos">Combos</option></select></div>
         {inventoryLoading || loading ? <LoadingRows/> : <div className="product-grid">
           {catalog !== 'combos' && currentProducts.filter(product => [product.name, product.category, product.sku ?? ''].some(value => value.toLocaleLowerCase().includes(search.toLocaleLowerCase()))).map(product =>
-            <button className="product-card" key={product.id} disabled={product.stock_quantity === 0} onClick={() => add('product', product.id)}>
-              <ProductPic product={product}/><div><b>{product.name}</b><small>{product.category}</small><strong>{money(product.sale_price)}</strong><span className={product.stock_quantity <= product.min_stock ? 'low' : ''}>{product.stock_quantity ? `${product.stock_quantity} disponibles` : 'Sin stock'}</span></div><i><Icon name="plus" size={16}/></i>
+            <button className="product-card" key={product.id} disabled={product.stock_quantity === 0 || Number(product.unit_cost) <= 0} onClick={() => add('product', product.id)}>
+              <ProductPic product={product}/><div><b>{product.name}</b><small>{product.category}</small><strong>{money(product.sale_price)}</strong><span className={product.stock_quantity <= product.min_stock ? 'low' : ''}>{Number(product.unit_cost) <= 0 ? 'Costo pendiente' : product.stock_quantity ? `${product.stock_quantity} disponibles` : 'Sin stock'}</span></div><i><Icon name="plus" size={16}/></i>
             </button>)}
           {catalog !== 'products' && currentCombos.filter(combo => combo.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) ||
             comboItems.some(item => item.combo_id === combo.id && products.find(product => product.id === item.product_id)?.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()))).map(combo => {
               const lines = comboItems.filter(item => item.combo_id === combo.id)
               const available = comboAvailability(lines, products)
-              return <button className="product-card" key={combo.id} disabled={!available} onClick={() => add('combo', combo.id)}>
-                <ProductPic product={combo}/><div><b>{combo.name}</b><small>{lines.map(item => `${item.quantity}× ${products.find(product => product.id === item.product_id)?.name ?? 'Producto'}`).join(' · ')}</small><strong>{money(combo.sale_price)}</strong><span>{available ? `${available} combos disponibles` : 'Sin stock'}</span></div><i><Icon name="plus" size={16}/></i>
+              const costPending = missingCost({ kind: 'combo', id: combo.id, quantity: 1 })
+              return <button className="product-card" key={combo.id} disabled={!available || costPending} onClick={() => add('combo', combo.id)}>
+                <ProductPic product={combo}/><div><b>{combo.name}</b><small>{lines.map(item => `${item.quantity}× ${products.find(product => product.id === item.product_id)?.name ?? 'Producto'}`).join(' · ')}</small><strong>{money(combo.sale_price)}</strong><span>{costPending ? 'Costo pendiente' : available ? `${available} combos disponibles` : 'Sin stock'}</span></div><i><Icon name="plus" size={16}/></i>
               </button>
             })}
           {!currentProducts.length && !currentCombos.length && <div className="empty-state">No hay productos ni combos activos. Agregá productos desde Stock.</div>}
@@ -171,7 +181,7 @@ export function SalesPage() {
         <div className="payment"><span>Método de pago</span><div>{(Object.keys(paymentLabels) as PaymentMethod[]).map(value => <button key={value} className={method === value ? 'selected' : ''} onClick={() => { setMethod(value); setPrepared(null); idempotencyKey.current = null }}>{paymentLabels[value]}</button>)}</div></div>
         {shortage && <StatusMessage message="El carrito supera el stock disponible. Reducí cantidades para continuar."/>}
         {actionError && <StatusMessage message={actionError}/>}
-        <Button className="confirm" disabled={!cart.length || Boolean(shortage) || busy || loading || inventoryLoading} onClick={prepare}>Revisar venta <Icon name="arrow" size={18}/></Button>
+        <Button className="confirm" disabled={!cart.length || Boolean(shortage) || cart.some(missingCost) || busy || loading || inventoryLoading} onClick={prepare}>Revisar venta <Icon name="arrow" size={18}/></Button>
         <small className="safe"><Icon name="check" size={14}/> El stock y los precios se verifican al confirmar.</small>
       </aside>
       {cart.length > 0 && <button className="mobile-cart-jump" onClick={() => document.getElementById('sales-checkout')?.scrollIntoView({ behavior: 'smooth' })}>Ver carrito · {cart.reduce((sum, line) => sum + line.quantity, 0)} · {money(total)}</button>}

@@ -17,7 +17,7 @@ const initialProducts = [
 
 type Product = typeof initialProducts[number]
 
-async function mockApi(page: Page, authenticated = true, failProducts = false, reportDays = 1, withHistory = false) {
+async function mockApi(page: Page, authenticated = true, failProducts = false, reportDays = 1, withHistory = false, pendingCost = false) {
   const mockUser = structuredClone(user)
   const mockSession = { ...session, user: mockUser }
   const resetRequests: any[] = []
@@ -26,6 +26,7 @@ async function mockApi(page: Page, authenticated = true, failProducts = false, r
     address: null, currency: 'ARS', time_zone: 'America/Argentina/Cordoba',
     default_min_stock: 0, logo_url: null, created_at: now, updated_at: now }
   const products: Product[] = structuredClone(initialProducts)
+  if (pendingCost) products[0].unit_cost = 0
   const movements: any[] = []
   const history: any[] = []
   const suppliers: any[] = []
@@ -352,6 +353,18 @@ test('historical ledger feeds dated report amounts while profit remains pending'
   await expect(page.locator('.mini-stats')).toContainText('Pendiente')
   await navigate(page, 'Compras')
   await expect(page.locator('.mini-stats')).toContainText('500')
+})
+
+test('products with unknown cost keep stock visible and cannot be sold with invented profit', async ({ page }) => {
+  await mockApi(page, true, false, 1, false, true)
+  await page.goto('/ventas')
+  const product = page.locator('.product-card').filter({ hasText: 'Skyy Vodka' })
+  await expect(product).toContainText('Costo pendiente')
+  await expect(product).toBeDisabled()
+  await navigate(page, 'Precios y rentabilidad')
+  await expect(page.locator('.price-table')).toContainText('Pendiente')
+  await navigate(page, 'Control de stock')
+  await expect(page.locator('.data-table')).toContainText('10 un.')
 })
 
 test('private route requires login, session survives reload, and logout clears it', async ({ page }) => {

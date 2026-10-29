@@ -9,6 +9,7 @@ import { StatusMessage } from '../components/ui/StatusMessage'
 import { PeriodPicker, selectedRange } from '../components/finance/PeriodPicker'
 import { FinancialBars } from '../components/finance/FinancialBars'
 import { useFinancialReport } from '../hooks/useFinancialReport'
+import { useInventory } from '../context/InventoryContext'
 import { groupFinancialDays, percentChange, type Grouping, type PeriodPreset } from '../lib/finance-rules'
 import { downloadReportCsv, downloadReportPdf, financialSummaryRows } from '../lib/report-export'
 import { errorMessage } from '../lib/errors'
@@ -22,6 +23,8 @@ const comparison = (current: number | null, previous: number | null) => {
 }
 
 export function ReportsPage() {
+  const { products } = useInventory()
+  const incompleteStockValue = products.some(product => product.is_active && product.stock_quantity > 0 && Number(product.unit_cost) <= 0)
   const [preset, setPreset] = useState<PeriodPreset>('month')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -77,7 +80,7 @@ export function ReportsPage() {
         <section className="panel"><h3>Productos más vendidos</h3>{report.top_products.length ? report.top_products.map(item => <div className="report-line" key={item.product_id}><span>{item.name} · {item.units} un.</span><strong>{money(item.direct_revenue)} individual</strong></div>) : <p>{report.historical?.sale_rows ? 'El detalle de productos históricos está en Histórico de octubre.' : 'Sin productos vendidos.'}</p>}<p>Este ranking muestra ventas operativas. Las unidades incluyen componentes de combos. El ingreso individual excluye descuentos de combos; no se distribuye su ganancia por bebida.</p></section>
         <section className="panel"><h3>Productos más comprados</h3>{report.top_purchased.length ? report.top_purchased.map(item => <div className="report-line" key={item.product_id}><span>{item.name} · {item.units} un.</span><strong>{money(item.total)}</strong></div>) : <p>{report.historical?.purchase_rows ? 'El detalle de compras históricas está en Histórico de octubre.' : 'Sin compras en el período.'}</p>}</section>
         <section className="panel"><h3>Compras por proveedor</h3>{report.supplier_totals.length ? report.supplier_totals.map(item => <div className="report-line" key={item.supplier_id ?? 'none'}><span>{item.name} · {item.purchases} compras</span><strong>{money(item.total)}</strong></div>) : <p>{report.historical?.purchase_rows ? 'Los proveedores históricos no están identificados por compra.' : 'Sin compras en el período.'}</p>}</section>
-        <section className="panel"><h3>Inventario actual</h3><div className="report-line"><span>Productos disponibles</span><strong>{report.inventory.available_products}</strong></div><div className="report-line"><span>Stock bajo / sin stock</span><strong>{report.inventory.low_stock_products} / {report.inventory.out_of_stock_products}</strong></div><div className="report-line"><span>Valor estimado al costo promedio</span><strong>{money(report.inventory.estimated_value)}</strong></div><p>Es una valuación aproximada del stock activo actual, no una cifra histórica del período.</p></section>
+        <section className="panel"><h3>Inventario actual</h3><div className="report-line"><span>Productos disponibles</span><strong>{report.inventory.available_products}</strong></div><div className="report-line"><span>Stock bajo / sin stock</span><strong>{report.inventory.low_stock_products} / {report.inventory.out_of_stock_products}</strong></div><div className="report-line"><span>Valor estimado al costo promedio</span><strong>{money(report.inventory.estimated_value)}{incompleteStockValue ? ' (parcial)' : ''}</strong></div><p>{incompleteStockValue ? 'Faltan costos de algunos productos en stock. Este valor no incluye esas unidades.' : 'Es una valuación aproximada del stock activo actual, no una cifra histórica del período.'}</p></section>
       </div>
       <div className="report-grid"><section className="panel"><h3>Ventas diarias</h3><div className="finance-group-list">{report.daily.map(day => <div className="report-line" key={day.date}><span>{day.date} · {day.sales_count} {report.historical?.sale_rows ? 'operaciones/renglones' : 'operaciones'}</span><strong>{money(day.revenue)}</strong></div>)}</div></section>
         <section className="panel"><h3>Gastos y compras diarios</h3><div className="finance-group-list">{report.daily.map(day => <div className="report-line" key={day.date}><span>{day.date}</span><strong>{money(day.expenses)} gastos · {money(day.purchases)} compras</strong></div>)}</div></section></div>

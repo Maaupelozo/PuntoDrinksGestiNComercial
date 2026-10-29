@@ -40,6 +40,8 @@ export function CombosPage() {
     ['Ganancia estimada', money(active.reduce((sum, combo) => sum + combo.sale_price - comboCost(comboItems.filter(item => item.combo_id === combo.id), products), 0)), 'Por una unidad de cada combo activo'],
   ]
   async function save(input: ComboInput) {
+    if (input.items.some(item => Number(products.find(product => product.id === item.productId)?.unit_cost ?? 0) <= 0))
+      throw new Error('Cargá los costos pendientes en Precios antes de crear este combo.')
     await saveCombo(dialog?.kind === 'edit' ? dialog.combo.id : null, input)
     await refresh()
     setDialog(null)
@@ -68,11 +70,12 @@ export function CombosPage() {
       {filtered.map(combo => {
         const items = comboItems.filter(item => item.combo_id === combo.id)
         const cost = comboCost(items, products)
+        const costPending = items.some(item => Number(products.find(product => product.id === item.product_id)?.unit_cost ?? 0) <= 0)
         const available = comboAvailability(items, products)
         return <div className="data-row" key={combo.id}>
           <span><button className="product-name" onClick={() => setDialog({ kind: 'details', combo })}>{combo.name}</button></span>
           <span>{describe(combo)}</span><span>{available ? `${available} combos` : 'Sin stock'}</span>
-          <strong>{money(combo.sale_price)}</strong><span>{money(cost)} / {money(combo.sale_price - cost)} ({comboMargin(combo.sale_price, cost)}%)</span>
+          <strong>{money(combo.sale_price)}</strong><span>{costPending ? 'Costo y ganancia pendientes' : `${money(cost)} / ${money(combo.sale_price - cost)} (${comboMargin(combo.sale_price, cost)}%)`}</span>
           <span><Badge type={combo.is_active ? 'success' : 'neutral'}>{combo.is_active ? 'Activo' : 'Inactivo'}</Badge></span>
         </div>
       })}</div> : <div className="empty-state">No hay combos para mostrar. Podés crear uno con el botón superior.</div>}
@@ -83,8 +86,8 @@ export function CombosPage() {
         <div><span>Descripción</span><b>{dialog.combo.description ?? 'Sin descripción'}</b></div>
         <div><span>Estado</span><b>{dialog.combo.is_active ? 'Activo' : 'Inactivo'}</b></div>
         <div><span>Precio promocional</span><b>{money(dialog.combo.sale_price)}</b></div>
-        <div><span>Costo actual</span><b>{money(comboCost(comboItems.filter(item => item.combo_id === dialog.combo.id), products))}</b></div>
-        <div><span>Ganancia estimada</span><b>{money(dialog.combo.sale_price - comboCost(comboItems.filter(item => item.combo_id === dialog.combo.id), products))}</b></div>
+        <div><span>Costo actual</span><b>{comboItems.some(item => item.combo_id === dialog.combo.id && Number(products.find(product => product.id === item.product_id)?.unit_cost ?? 0) <= 0) ? 'Pendiente' : money(comboCost(comboItems.filter(item => item.combo_id === dialog.combo.id), products))}</b></div>
+        <div><span>Ganancia estimada</span><b>{comboItems.some(item => item.combo_id === dialog.combo.id && Number(products.find(product => product.id === item.product_id)?.unit_cost ?? 0) <= 0) ? 'Pendiente' : money(dialog.combo.sale_price - comboCost(comboItems.filter(item => item.combo_id === dialog.combo.id), products))}</b></div>
         <div><span>Disponibles</span><b>{comboAvailability(comboItems.filter(item => item.combo_id === dialog.combo.id), products)}</b></div>
         <div><span>Creado</span><b>{new Date(dialog.combo.created_at).toLocaleString('es-AR')}</b></div>
         <div><span>Actualizado</span><b>{new Date(dialog.combo.updated_at).toLocaleString('es-AR')}</b></div>
