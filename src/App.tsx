@@ -8,6 +8,7 @@ import { PurchasesPage } from "./pages/PurchasesPage"
 import { ExpensesPage } from "./pages/ExpensesPage"
 import { CombosPage } from "./pages/CombosPage"
 import { ReportsPage } from "./pages/ReportsPage"
+import { HistoricalPage } from "./pages/HistoricalPage"
 import { SuppliersPage } from "./pages/SuppliersPage"
 import { SettingsPage } from "./pages/SettingsPage"
 import { LoginPage } from './pages/LoginPage'
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="gastos" element={<ExpensesPage />} />
         <Route path="combos" element={<InventoryRoute><SalesProvider><CombosPage /></SalesProvider></InventoryRoute>} />
         <Route path="reportes" element={<ReportsPage />} />
+        <Route path="historico" element={<HistoricalPage />} />
         <Route path="proveedores" element={<ProcurementProvider><SuppliersPage /></ProcurementProvider>} />
         <Route path="configuracion" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

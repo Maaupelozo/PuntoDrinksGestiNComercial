@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { Module } from '../components/ui/Module'
 import { MiniStats } from '../components/ui/MiniStats'
 import { PanelTitle } from '../components/ui/PanelTitle'
@@ -47,6 +48,7 @@ export function ReportsPage() {
   }
   return <Module title="Reportes y estadísticas" subtitle="Resultados económicos y flujo del negocio" action={report && range ? 'Exportar CSV' : undefined} onAction={() => { if (report && range) downloadReportCsv(report, range) }}>
     {(error || exportError) && <StatusMessage message={error || exportError || ''}/>}
+    <p className="historical-notice">Los movimientos reconstruidos de octubre están en <Link to="/historico">Histórico de octubre</Link>. Se mantienen separados de estos cálculos hasta conciliar costos y stock.</p>
     <div className="report-filter finance-filter"><PeriodPicker preset={preset} onPreset={setPreset} from={from} to={to} onFrom={setFrom} onTo={setTo} error={periodError}/>
       <div><Button secondary disabled={!report || !range || loading} onClick={() => void exportPdf()}>Exportar PDF</Button><Button secondary onClick={() => void refresh()}>Actualizar</Button></div></div>
     {loading ? <LoadingRows/> : report && summary ? <>

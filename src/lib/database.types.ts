@@ -3,12 +3,19 @@ import type { PurchaseItemRecord, PurchaseRecord, SupplierRecord } from '../type
 import type { ComboItemRecord, ComboRecord, SaleComponentRecord, SaleItemRecord, SaleRecord } from '../types/sales'
 import type { ExpenseAuditRecord, ExpenseRecord, FinancialReport } from '../types/finance'
 import type { BusinessSettingsRecord } from '../types/settings'
+import type { HistoricalRecord } from '../types/historical'
 
 // Mirrors the columns and RPC signatures in supabase/migrations.
 // Regenerate from Supabase after applying the migration if the schema changes.
 export interface Database {
   public: {
     Tables: {
+      historical_records: {
+        Row: HistoricalRecord
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       products: {
         Row: ProductRecord
         Insert: never
@@ -160,6 +167,8 @@ export interface Database {
       }
       void_expense: { Args: { p_expense_id: string; p_reason: string }; Returns: ExpenseRecord }
       financial_report: { Args: { p_start_date: string; p_end_date: string }; Returns: FinancialReport }
+      import_historical_records: { Args: { p_records: Record<string, unknown>[] }
+        Returns: { inserted: number; already_present: number } }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

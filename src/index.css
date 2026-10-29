@@ -148,3 +148,23 @@
 .settings-form .field input[readonly]{color:var(--muted);background:#fafafa}
 .settings-form .field>div:has(input[readonly]){background:#fafafa}
 @media(max-width:820px){.settings-nav{display:flex;flex-direction:row;overflow-x:auto;white-space:nowrap;padding-bottom:4px}.settings-nav button{flex:none;gap:10px}.settings-grid{gap:10px}}
+
+.historical-notice{border:1px solid var(--line);border-left:3px solid var(--red);border-radius:8px;padding:12px 14px;color:var(--muted);font-size:12px;line-height:1.5}
+.historical-notice a{color:var(--red);font-weight:600}
+.historical-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0}
+.historical-controls .finance-grouping{display:flex;gap:5px;flex-wrap:wrap;margin:0}
+.historical-controls .search{min-width:200px;max-width:320px}
+.historical-count{font-size:12px;color:var(--muted)}
+.historical-count strong{color:var(--text)}
+.historical-records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.historical-record{min-width:0;border:1px solid var(--line);border-radius:9px;padding:14px}
+.historical-record-heading{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.historical-record-heading>div{min-width:0}
+.historical-record-heading small{font-size:10px;color:var(--muted)}
+.historical-record-heading h3{font-size:13px;margin:5px 0 0;overflow-wrap:anywhere}
+.historical-record-heading>strong{white-space:nowrap;font-size:14px}
+.historical-record-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;color:var(--muted);font-size:10px}
+.historical-components{list-style:none;padding:8px 0 0;margin:8px 0 0;border-top:1px solid var(--line);font-size:11px;line-height:1.6}
+.historical-note{font-size:11px;color:var(--muted);line-height:1.5;margin:8px 0 0;overflow-wrap:anywhere}
+@media(max-width:900px){.historical-records{grid-template-columns:minmax(0,1fr)}.historical-controls{align-items:stretch;flex-direction:column}.historical-controls .search{max-width:none;width:100%}}
+@media(max-width:480px){.historical-record-heading{flex-direction:column}.historical-record-heading>strong{white-space:normal}}

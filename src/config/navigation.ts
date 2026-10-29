@@ -9,6 +9,7 @@ export const navigation: NavigationItem[] = [
   { label: "Gastos", icon: "wallet", to: "/gastos" },
   { label: "Combos y promociones", icon: "gift", to: "/combos" },
   { label: "Reportes", icon: "report", to: "/reportes" },
+  { label: "Histórico de octubre", icon: "calendar", to: "/historico" },
   { label: "Proveedores", icon: "truck", to: "/proveedores" },
   { label: "Configuración", icon: "settings", to: "/configuracion" },
 ]

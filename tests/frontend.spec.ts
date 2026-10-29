@@ -68,6 +68,24 @@ async function mockApi(page: Page, authenticated = true, failProducts = false, r
     const path = url.pathname
     const body = route.request().postDataJSON() as Record<string, any> | null
     const json = (data: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
+    if (path.endsWith('/historical_records')) return json([
+      { id: '90000000-0000-4000-8000-000000000001', owner_id: userId,
+        source_key: 'test-sale-01', source_fingerprint: 'a'.repeat(32),
+        kind: 'sale', business_date: '2026-10-09', description: 'Venta de prueba',
+        quantity: 1, amount: 1200, record_status: 'confirmed_composition',
+        details: { source: 'Prueba local', paymentMethod: null,
+          components: [{ name: 'Producto A', quantity: 1 }, { name: 'Producto B', quantity: 2 }] }, imported_at: now },
+      { id: '90000000-0000-4000-8000-000000000002', owner_id: userId,
+        source_key: 'test-expense-01', source_fingerprint: 'b'.repeat(32),
+        kind: 'expense', business_date: '2026-10-10', description: 'No detallado',
+        quantity: null, amount: 300, record_status: 'unclassified',
+        details: { source: 'Prueba local', paymentMethod: null }, imported_at: now },
+      { id: '90000000-0000-4000-8000-000000000003', owner_id: userId,
+        source_key: 'test-count-01', source_fingerprint: 'c'.repeat(32),
+        kind: 'count', business_date: '2026-10-28', description: 'Producto C',
+        quantity: 3, amount: null, record_status: 'counted',
+        details: { source: 'Prueba local' }, imported_at: now },
+    ])
     if (path.endsWith('/business_settings')) {
       if (route.request().method() === 'PATCH' || route.request().method() === 'POST') Object.assign(settings, body, { updated_at: new Date().toISOString() })
       return json(settings)
@@ -260,7 +278,7 @@ const sections = [
   ['/', 'Dashboard', 'Buen día'], ['/ventas', 'Ventas', 'Nueva venta'],
   ['/stock', 'Control de stock', 'Control de stock'], ['/precios', 'Precios y rentabilidad', 'Precios y rentabilidad'],
   ['/compras', 'Compras', 'Compras'], ['/gastos', 'Gastos', 'Gastos'], ['/combos', 'Combos y promociones', 'Combos y promociones'],
-  ['/reportes', 'Reportes', 'Reportes y estadísticas'], ['/proveedores', 'Proveedores', 'Proveedores'], ['/configuracion', 'Configuración', 'Configuración'],
+  ['/reportes', 'Reportes', 'Reportes y estadísticas'], ['/historico', 'Histórico de octubre', 'Histórico de octubre'], ['/proveedores', 'Proveedores', 'Proveedores'], ['/configuracion', 'Configuración', 'Configuración'],
 ]
 
 async function navigate(page: Page, label: string) {
@@ -304,6 +322,22 @@ test('reports fit the viewport and use page scrolling for daily data', async ({ 
     for (const [index, item] of layout.nested.entries())
       expect(item.scroll, `La sección ${index + 1} tiene scroll interno a ${width}px`).toBeLessThanOrEqual(item.client)
   }
+})
+
+test('historical ledger shows exact dated entries and unknown details without altering operational reports', async ({ page }) => {
+  await mockApi(page)
+  await page.goto('/historico')
+  await expect(page.locator('.mini-stats')).toContainText('1.200')
+  await expect(page.locator('.historical-records')).toContainText('Venta de prueba')
+  await expect(page.locator('.historical-records')).toContainText('Pago: No informado')
+  await page.getByRole('button', { name: 'Gastos (1)' }).click()
+  await expect(page.locator('.historical-records')).toContainText('No detallado')
+  await expect(page.locator('.historical-records')).toContainText('300')
+  await page.getByRole('button', { name: 'Conteo físico (1)' }).click()
+  await expect(page.locator('.historical-count')).toContainText('3 unidades')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await navigate(page, 'Reportes')
+  await expect(page.locator('.finance-summary')).toContainText('0')
 })
 
 test('private route requires login, session survives reload, and logout clears it', async ({ page }) => {
