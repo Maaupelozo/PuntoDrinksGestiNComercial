@@ -39,6 +39,7 @@ export function StockMovementForm({ product, initialType = 'entry', onSave, onCa
 
   return <form onSubmit={prepare}>
     <p>Stock disponible: <b>{product.stock_quantity} unidades</b></p>
+    <p className="formula">Este movimiento no registra una compra ni un pago. Para mercadería comprada, usá Compras.</p>
     {error && <StatusMessage message={error}/>}
     <label className="select-field">Tipo de movimiento<select value={type} onChange={event => { setType(event.target.value as MovementType); setPending(null) }}>
       <option value="entry">Entrada</option><option value="exit">Salida</option><option value="adjustment">Ajuste</option>

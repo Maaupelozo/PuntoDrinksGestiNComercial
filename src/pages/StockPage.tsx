@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { Module } from '../components/ui/Module'
 import { Search } from '../components/ui/Search'
 import { Button } from '../components/ui/Button'
@@ -63,6 +64,7 @@ export function StockPage() {
   return <Module title="Control de stock" subtitle={subtitle} action="Agregar producto" onAction={() => open({ kind: 'create' })}>
     {notice && <StatusMessage tone="success" message={notice}/>}
     {error && <StatusMessage message={error}/>}
+    <p className="historical-notice">Si compraste mercadería, registrala en <Link to="/compras">Compras</Link>: suma el stock y guarda lo pagado. La entrada manual de esta pantalla sólo cambia unidades.</p>
     <div className="toolbar">
       <Search value={search} onChange={value => { setSearch(value); setPage(1) }} placeholder="Buscar productos..."/>
       <div className="filter-wrap">
@@ -72,7 +74,7 @@ export function StockPage() {
         <select aria-label="Filtrar estado" value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}>
           <option value="active">Estado: Activos</option><option value="all">Todos</option><option value="low">Stock bajo</option><option value="empty">Sin stock</option><option value="inactive">Inactivos</option>
         </select>
-        <Button onClick={() => { setEntryProductId(activeProducts[0]?.id ?? ''); open({ kind: 'select-entry' }) }}>Entrada de mercadería</Button>
+        <Button onClick={() => { setEntryProductId(activeProducts[0]?.id ?? ''); open({ kind: 'select-entry' }) }}>Entrada manual de stock</Button>
       </div>
     </div>
     {loading ? <LoadingRows/> : filtered.length === 0 ? <div className="empty-state">No hay productos para mostrar. Podés agregar una bebida con el botón superior.</div> : <>
@@ -92,7 +94,7 @@ export function StockPage() {
         <button disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>›</button>
       </div></div>
     </>}
-    {dialog && <Modal title={dialog.kind === 'create' ? 'Agregar producto' : dialog.kind === 'select-entry' ? 'Entrada de mercadería' : dialog.kind === 'edit' ? 'Editar producto' : dialog.kind === 'movement' ? `Movimiento de ${dialog.product.name}` : dialog.kind === 'history' ? `Movimientos de ${dialog.product.name}` : dialog.kind === 'deactivate' ? 'Desactivar producto' : 'Producto'} onClose={() => setDialog(null)}>
+    {dialog && <Modal title={dialog.kind === 'create' ? 'Agregar producto' : dialog.kind === 'select-entry' ? 'Entrada manual de stock' : dialog.kind === 'edit' ? 'Editar producto' : dialog.kind === 'movement' ? `Movimiento de ${dialog.product.name}` : dialog.kind === 'history' ? `Movimientos de ${dialog.product.name}` : dialog.kind === 'deactivate' ? 'Desactivar producto' : 'Producto'} onClose={() => setDialog(null)}>
       {dialog.kind === 'create' && <ProductForm onCancel={() => setDialog(null)} onSave={async input => { await createProduct(input); await refresh(); setDialog(null); setNotice(`${input.name} fue creado.`) }}/>}
       {dialog.kind === 'edit' && <ProductForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async input => { await updateProduct(dialog.product.id, input); await refresh(); setDialog(null); setNotice(`${input.name} fue actualizado.`) }}/>}
       {dialog.kind === 'select-entry' && <>
