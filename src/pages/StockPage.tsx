@@ -11,16 +11,17 @@ import { LoadingRows } from '../components/ui/LoadingRows'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { ProductForm } from '../components/inventory/ProductForm'
 import { StockMovementForm } from '../components/inventory/StockMovementForm'
+import { StockQuantityForm } from '../components/inventory/StockQuantityForm'
 import { HistoryList } from '../components/inventory/HistoryList'
 import { useInventory } from '../context/InventoryContext'
-import { createProduct, updateProduct, adjustStock, deactivateProduct } from '../services/inventory'
+import { createProduct, updateProduct, adjustStock, setStockQuantity, deactivateProduct } from '../services/inventory'
 import { errorMessage } from '../lib/errors'
 import { money } from '../utils/money'
 import type { ProductRecord } from '../types/inventory'
 
 type Dialog =
   | { kind: 'create' | 'select-entry' }
-  | { kind: 'details' | 'edit' | 'movement' | 'history' | 'deactivate'; product: ProductRecord }
+  | { kind: 'details' | 'edit' | 'quantity' | 'movement' | 'history' | 'deactivate'; product: ProductRecord }
 
 export function StockPage() {
   const { products, loading, error, refresh } = useInventory()
@@ -80,7 +81,7 @@ export function StockPage() {
     {loading ? <LoadingRows/> : filtered.length === 0 ? <div className="empty-state">No hay productos para mostrar. Podés agregar una bebida con el botón superior.</div> : <>
       <div className="data-table"><div className="data-row data-head"><span>Producto</span><span>Categoría</span><span>Disponible</span><span>Stock mínimo</span><span>Estado</span><span/></div>
         {visible.map(product => <div className="data-row" key={product.id}>
-          <span className="product-cell"><ProductPic product={product}/><span><button className="product-name" onClick={() => open({ kind: 'details', product })}>{product.name}</button><small>{product.sku ?? 'Sin SKU'}</small></span></span>
+          <span className="product-cell"><ProductPic product={product}/><span><button className="product-name" onClick={() => open({ kind: 'details', product })}>{product.name}</button><small>{product.sku ?? 'Sin SKU'} · {product.stock_quantity} un.</small>{product.is_active && <button className="stock-edit-link" onClick={() => open({ kind: 'quantity', product })}>Editar cantidad</button>}</span></span>
           <span>{product.category}</span><strong>{product.stock_quantity} un.</strong><span>{product.min_stock} un.</span>
           <span><Badge type={!product.is_active ? 'neutral' : product.stock_quantity === 0 ? 'danger' : product.stock_quantity <= product.min_stock ? 'warning' : 'success'}>
             {!product.is_active ? 'Inactivo' : product.stock_quantity === 0 ? 'Sin stock' : product.stock_quantity <= product.min_stock ? 'Stock bajo' : 'Disponible'}
@@ -94,7 +95,7 @@ export function StockPage() {
         <button disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>›</button>
       </div></div>
     </>}
-    {dialog && <Modal title={dialog.kind === 'create' ? 'Agregar producto' : dialog.kind === 'select-entry' ? 'Entrada manual de stock' : dialog.kind === 'edit' ? 'Editar producto' : dialog.kind === 'movement' ? `Movimiento de ${dialog.product.name}` : dialog.kind === 'history' ? `Movimientos de ${dialog.product.name}` : dialog.kind === 'deactivate' ? 'Desactivar producto' : 'Producto'} onClose={() => setDialog(null)}>
+    {dialog && <Modal title={dialog.kind === 'create' ? 'Agregar producto' : dialog.kind === 'select-entry' ? 'Entrada manual de stock' : dialog.kind === 'edit' ? 'Editar producto' : dialog.kind === 'quantity' ? `Editar cantidad de ${dialog.product.name}` : dialog.kind === 'movement' ? `Movimiento de ${dialog.product.name}` : dialog.kind === 'history' ? `Movimientos de ${dialog.product.name}` : dialog.kind === 'deactivate' ? 'Desactivar producto' : 'Producto'} onClose={() => setDialog(null)}>
       {dialog.kind === 'create' && <ProductForm onCancel={() => setDialog(null)} onSave={async input => { await createProduct(input); await refresh(); setDialog(null); setNotice(`${input.name} fue creado.`) }}/>}
       {dialog.kind === 'edit' && <ProductForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async input => { await updateProduct(dialog.product.id, input); await refresh(); setDialog(null); setNotice(`${input.name} fue actualizado.`) }}/>}
       {dialog.kind === 'select-entry' && <>
@@ -105,7 +106,8 @@ export function StockPage() {
         <div><span>SKU</span><b>{dialog.product.sku ?? 'Sin SKU'}</b></div><div><span>Stock</span><b>{dialog.product.stock_quantity} un.</b></div>
         <div><span>Stock mínimo</span><b>{dialog.product.min_stock} un.</b></div><div><span>Costo unitario</span><b>{Number(dialog.product.unit_cost) <= 0 ? 'Pendiente' : money(dialog.product.unit_cost)}</b></div>
         <div><span>Precio de venta</span><b>{money(dialog.product.sale_price)}</b></div><div><span>Estado</span><b>{dialog.product.is_active ? 'Activo' : 'Inactivo'}</b></div>
-      </div><div className="form-actions"><Button secondary onClick={() => open({ kind: 'history', product: dialog.product })}>Movimientos</Button>{dialog.product.is_active && <><Button secondary onClick={() => open({ kind: 'movement', product: dialog.product })}>Ajustar stock</Button><Button secondary onClick={() => open({ kind: 'deactivate', product: dialog.product })}>Desactivar</Button><Button onClick={() => open({ kind: 'edit', product: dialog.product })}>Editar</Button></>}</div></>}
+      </div><div className="form-actions"><Button secondary onClick={() => open({ kind: 'history', product: dialog.product })}>Movimientos</Button>{dialog.product.is_active && <><Button secondary onClick={() => open({ kind: 'movement', product: dialog.product })}>Ajustar stock</Button><Button secondary onClick={() => open({ kind: 'deactivate', product: dialog.product })}>Desactivar</Button><Button secondary onClick={() => open({ kind: 'edit', product: dialog.product })}>Editar</Button><Button onClick={() => open({ kind: 'quantity', product: dialog.product })}>Editar cantidad</Button></>}</div></>}
+      {dialog.kind === 'quantity' && <StockQuantityForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async (quantity, reason) => { await setStockQuantity(dialog.product.id, dialog.product.stock_quantity, quantity, reason); await refresh(); setDialog(null); setNotice(`${dialog.product.name}: stock actualizado a ${quantity} unidades.`) }}/>}
       {dialog.kind === 'movement' && <StockMovementForm product={dialog.product} onCancel={() => setDialog(null)} onSave={async input => { await adjustStock(input, dialog.product.stock_quantity); await refresh(); setDialog(null); setNotice('Movimiento de stock registrado.') }}/>}
       {dialog.kind === 'history' && <HistoryList productId={dialog.product.id} kind="stock"/>}
       {dialog.kind === 'deactivate' && <><p>¿Desactivar {dialog.product.name}? El producto dejará de estar disponible y sus movimientos quedarán en el historial.</p>{dialogError && <StatusMessage message={dialogError}/>}<div className="form-actions"><Button secondary onClick={() => setDialog(null)}>Cancelar</Button><Button disabled={busy} onClick={() => void deactivate(dialog.product)}>{busy ? 'Guardando…' : 'Confirmar desactivación'}</Button></div></>}

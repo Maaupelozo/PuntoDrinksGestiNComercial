@@ -150,6 +150,10 @@ async function mockApi(page: Page, authenticated = true, failProducts = false, r
     if (path.endsWith('/purchase_items')) return json(purchaseItems)
     if (path.endsWith('/products')) {
       if (failProducts) return json({ code: 'PGRST205', message: 'Missing table' }, 404)
+      if (route.request().headers()['accept']?.includes('application/vnd.pgrst.object+json')) {
+        const product = products.find(item => `eq.${item.id}` === url.searchParams.get('id'))
+        return product ? json({ stock_quantity: product.stock_quantity }) : json({ code: 'PGRST116', message: 'Not found' }, 406)
+      }
       return json(products.slice().sort((a, b) => a.name.localeCompare(b.name)))
     }
     if (path.endsWith('/inventory_movements')) return json(movements.filter((item: any) => `eq.${item.product_id}` === url.searchParams.get('product_id')))
@@ -343,15 +347,20 @@ test('historical ledger feeds dated report amounts while profit remains pending'
   await expect(page.locator('.historical-count')).toContainText('3 unidades')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await navigate(page, 'Reportes')
+  await page.getByLabel('Período financiero').selectOption('custom')
+  await page.getByLabel('Desde').fill('2026-10-01')
+  await page.getByLabel('Hasta').fill('2026-10-31')
   await expect(page.locator('.finance-summary')).toContainText('1.200')
   await expect(page.locator('.finance-summary')).toContainText('300')
   await expect(page.locator('.finance-summary')).toContainText('500')
   await expect(page.locator('.finance-summary')).toContainText('Pendiente')
   await navigate(page, 'Ventas')
   await page.getByRole('button', { name: 'Ver historial' }).click()
-  await expect(page.locator('.mini-stats')).toContainText('1.200')
+  await page.getByLabel('Filtrar período de ventas').selectOption('all')
+  await expect(page.locator('.mini-stats')).toContainText('Operaciones y renglones')
   await expect(page.locator('.mini-stats')).toContainText('Pendiente')
   await navigate(page, 'Compras')
+  await page.getByLabel('Filtrar período', { exact: true }).selectOption('all')
   await expect(page.locator('.mini-stats')).toContainText('500')
 })
 
@@ -560,6 +569,23 @@ test('backend errors are shown without losing the page', async ({ page }) => {
   await page.goto('/stock')
   await expect(page.getByRole('alert')).toContainText('Falta aplicar una migración')
   await expect(page.locator('h1')).toHaveText('Control de stock')
+})
+
+test('stock quantity can be corrected directly without creating a purchase', async ({ page }) => {
+  const state = await mockApi(page)
+  await page.goto('/stock')
+  const row = page.locator('.data-row:not(.data-head)').filter({ hasText: 'Skyy Vodka' })
+  await expect(row.getByRole('button', { name: 'Editar cantidad' })).toBeVisible()
+  await row.getByRole('button', { name: 'Editar cantidad' }).click()
+  await page.getByLabel('Cantidad final en stock').fill('7')
+  await page.getByLabel('Motivo del ajuste').fill('Conteo físico')
+  await page.getByRole('button', { name: 'Revisar cambio' }).click()
+  await expect(page.getByRole('status')).toContainText('de 10 a 7 unidades')
+  await page.getByRole('button', { name: 'Confirmar cantidad' }).click()
+  await expect(row).toContainText('7 un.')
+  expect(state.products[0].stock_quantity).toBe(7)
+  expect(state.movements.at(-1)).toMatchObject({ movement_type: 'adjustment', quantity_delta: -3, reason: 'Conteo físico' })
+  expect(state.purchases).toHaveLength(0)
 })
 
 test('combo creation, mixed sale, stock discount and history survive reload', async ({ page }) => {

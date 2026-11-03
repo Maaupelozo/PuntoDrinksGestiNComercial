@@ -58,7 +58,7 @@ export function ProductForm({ product, onSave, onCancel }: {
       {!product && <label className="field"><span>Stock inicial</span><div><input type="number" min="0" step="1" value={stock} required onChange={event => setStock(event.target.value)}/></div></label>}
       <label className="field"><span>Stock mínimo</span><div><input type="number" min="0" step="1" value={minimum} required onChange={event => { setMinimumTouched(true); setMinimum(event.target.value) }}/></div></label>
     </div>
-    {product && <p className="formula">Para modificar el stock usá Entrada, Salida o Ajuste en Control de stock.</p>}
+    {product && <p className="formula">Para corregir las unidades, usá «Editar cantidad» en Control de stock.</p>}
     <div className="form-actions"><Button secondary onClick={onCancel}>Cancelar</Button><Button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar producto'}</Button></div>
   </form>
 }

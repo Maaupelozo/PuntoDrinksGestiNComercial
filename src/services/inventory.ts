@@ -56,6 +56,18 @@ export async function adjustStock(input: StockAdjustment, currentStock: number) 
   return data
 }
 
+export async function setStockQuantity(productId: string, expectedStock: number, targetStock: number, reason: string) {
+  const delta = targetStock - expectedStock
+  validateMovement('adjustment', delta, reason, expectedStock)
+  const { data: current, error } = await requireSupabase().from('products')
+    .select('stock_quantity').eq('id', productId).single()
+  if (error) throw error
+  if (current.stock_quantity !== expectedStock) {
+    throw new Error('El stock cambió desde que abriste este producto. Cerrá esta ventana y volvé a intentarlo con la cantidad actual.')
+  }
+  return adjustStock({ productId, type: 'adjustment', delta, reason }, expectedStock)
+}
+
 export async function updatePrices(productId: string, unitCost: number, salePrice: number) {
   parseMoney(String(unitCost), 'Costo unitario')
   parseMoney(String(salePrice), 'Precio de venta')

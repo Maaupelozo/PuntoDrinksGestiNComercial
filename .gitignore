@@ -3,6 +3,7 @@ dist/
 .vercel/
 build/
 .cache/
+supabase/manual/reclassify_replenishments_oct_nov_2026.sql
 .env*
 !.env.example
 .vite/
